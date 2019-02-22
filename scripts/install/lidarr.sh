@@ -1,22 +1,3 @@
-#!/bin/bash
-#
-# [Quick Box :: Install Lidarr package]
-#
-# GITHUB REPOS
-# GitHub _ packages  :   https://github.com/QuickBox/QB
-# LOCAL REPOS
-# Local _ packages   :   /etc/QuickBox/packages
-# Author             :   KaraokeStu | ts050
-# URL                :   https://quickbox.io
-#
-# QuickBox Copyright (C) 2018 QuickBox.io
-# Licensed under GNU General Public License v3.0 GPL-3 (in short)
-#
-#   You may copy, distribute and modify the software as long as you track
-#   changes/dates in source files. Any modifications to our software
-#   including (via compiler) GPL-licensed code must also be made available
-#   under the GPL along with build & install instructions.
-#
 
 function _installLidarrIntro() {
   echo "Lidarr will now be installed." >>"${OUTTO}" 2>&1;
