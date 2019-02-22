@@ -28,6 +28,6 @@ Changes in fork
 #### 21/2/19 - Added scripts for integrating Lidarr(nee testing)
 
 TODO 
--> Makemkv
--> Airsonic
--> Mylar
+* Makemkv
+* Airsonic
+* Mylar
