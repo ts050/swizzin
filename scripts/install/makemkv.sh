@@ -24,12 +24,14 @@ sudo make install
 # makemkv-bin install
 cd ../makemkv-bin-*
 # Skipping accept license step
+
 sudo make install
 
 rm -rf makemkv-* 
 
 function _updateMakemkvLicenseKey() {
   key=$(wget -q "https://www.makemkv.com/forum/viewtopic.php?f=5&t=1053" -O - | grep code | sed -n 's:.*<code>\(.*\)</code>.*:\1:p')
+
 }
 
 function _installMakemkvDependencies() {
