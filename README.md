@@ -31,3 +31,4 @@ TODO
 * Makemkv
 * Airsonic
 * Mylar
+* Pydio
