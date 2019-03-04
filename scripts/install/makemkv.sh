@@ -10,7 +10,10 @@ fi
 
 function _updateMakemkvLicenseKey() {
   key=$(wget -q "https://www.makemkv.com/forum/viewtopic.php?f=5&t=1053" -O - | grep code | sed -n 's:.*<code>\(.*\)</code>.*:\1:p')
-
+  if [[ ! -f ~/.MakeMKV/settings.conf ]]; then
+    touch ~/.MakeMKV/settings.conf
+  fi
+  echo "app_Key = "$key"" > ~/.MakeMKV/settings.conf
 }
 
 function _installMakemkvDependencies() {
@@ -43,5 +46,7 @@ if [[ ! -f /install/.ffmpeg.lock ]]; then
   echo "ERROR: no ffmpeg installation. Please install ffmpeg if you want to configure your installation."
   exit 1
 else
+
+_updateMakemkvLicenseKey
 
 touch /install/.makemkv.lock
