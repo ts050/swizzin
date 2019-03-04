@@ -25,10 +25,10 @@ sudo -H su -c 'bash <(wget -O- -q https://raw.githubusercontent.com/liaralabs/sw
 * Ubuntu 16.04 and above
 
 Changes in fork
-#### 21/2/19 - Added scripts for integrating Lidarr(nee testing)
+#### 21/2/19 - Added scripts for integrating Lidarr(needs testing)
 
 TODO 
-* Makemkv
+* ~~Makemkv~~
 * Airsonic
 * Mylar
 * Pydio
