@@ -30,7 +30,7 @@ Changes in fork
 TODO 
 * ~~Lidarr~~
 * ~~Makemkv~~
-* Makemkv - Update scripts for license
+* Makemkv - add cronjob to update scripts for license
 * Airsonic
 * Mylar
 * Pydio
