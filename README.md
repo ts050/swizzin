@@ -18,6 +18,7 @@ Example:
 ```
 sudo -H su -c 'bash <(wget -O- -q https://raw.githubusercontent.com/liaralabs/swizzin/master/setup.sh)'
 ```
+# Replace 'liaralabs ' in the above urls with 'ts050' to have a go at the changes I made
 
 
 #### Supported:
