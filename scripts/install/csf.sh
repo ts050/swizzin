@@ -77,7 +77,7 @@ function _installCSF() {
   -e "s/#BDE|3600|0|/BDE|3600|100|/" \
   -e "s/#BDEALL|86400|0|/BDEALL|86400|100|/" /etc/csf/csf.blocklists
 
-  cat >>test <<CSFP
+  cat >>/etc/csf/csf.pignore <<CSFP
 [ QuickBox Additions - These are necessary to avoid noisy emails ]
 exe:/usr/sbin/rsyslogd
 exe:/lib/systemd/systemd-timesyncd
