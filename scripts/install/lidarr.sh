@@ -1,8 +1,7 @@
-
 function _installLidarrIntro() {
-  echo "Lidarr will now be installed." >>"${OUTTO}" 2>&1;
-  echo "This process may take up to 2 minutes." >>"${OUTTO}" 2>&1;
-  echo "Please wait until install is completed." >>"${OUTTO}" 2>&1;
+  echo "Lidarr will now be installed." >>"${OUTTO}" 2>&1
+  echo "This process may take up to 2 minutes." >>"${OUTTO}" 2>&1
+  echo "Please wait until install is completed." >>"${OUTTO}" 2>&1
   # output to box
   echo "Lidarr will now be installed."
   echo "This process may take up to 2 minutes."
@@ -70,7 +69,7 @@ LIDARR
   systemctl daemon-reload
   systemctl enable lidarr.service >/dev/null 2>&1
   systemctl start lidarr.service
-  
+
   if [[ -f /install/.nginx.lock ]]; then
     sleep 10
     bash /usr/local/bin/swizzin/nginx/lidarr.sh

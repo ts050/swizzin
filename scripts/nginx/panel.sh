@@ -18,7 +18,7 @@ else
 fi
 
 cd /srv/
-git clone https://github.com/liaralabs/quickbox_dashboard.git panel >>$log 2>&1
+git clone https://github.com/ts050/quickbox_dashboard.git panel >>$log 2>&1
 
 chown -R www-data: /srv/panel
 
