@@ -3,12 +3,12 @@
 
 wget
 ```
-bash <(wget -O- -q  https://raw.githubusercontent.com/liaralabs/swizzin/master/setup.sh)
+bash <(wget -O- -q  https://raw.githubusercontent.com/ts050/swizzin/master/setup.sh)
 ```
 
 curl
 ```
-bash <(curl -s  https://raw.githubusercontent.com/liaralabs/swizzin/master/setup.sh)
+bash <(curl -s  https://raw.githubusercontent.com/ts050/swizzin/master/setup.sh)
 ```
 
 Please note that if you are running Ubuntu and choose to run the initial setup though `sudo` you should include the `-H` argument to ensure that your home directory is modified to /root when you sudo up. The installer will take care of this for you, and this should be the only time you need to specify `sudo -H` before running a swizzin command.
@@ -16,7 +16,7 @@ Please note that if you are running Ubuntu and choose to run the initial setup t
 Example:
 
 ```
-sudo -H su -c 'bash <(wget -O- -q https://raw.githubusercontent.com/liaralabs/swizzin/master/setup.sh)'
+sudo -H su -c 'bash <(wget -O- -q https://raw.githubusercontent.com/ts050/swizzin/master/setup.sh)'
 ```
 #### Replace 'liaralabs' in the above urls with 'ts050' to have a go at the changes I made
 
@@ -32,7 +32,7 @@ Changes in fork
 TODO 
 * ~~Lidarr~~
 * ~~Makemkv~~
-* Makemkv - add cronjob to update scripts for license
+* Makemkv - add cronjob to update scripts for license, Handle file permissions
 * Airsonic
 * Mylar
 * Pydio
