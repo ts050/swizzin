@@ -1,4 +1,3 @@
-
 MASTER=$(cat /root/.master.info | cut -d: -f1)
 isactive=$(systemctl is-active lidarr)
 
@@ -6,7 +5,7 @@ if [[ $isactive == "active" ]]; then
   systemctl stop lidarr
 fi
 if [[ ! -f /etc/nginx/apps/lidarr.conf ]]; then
-  cat > /etc/nginx/apps/lidarr.conf <<LIDARR
+  cat >/etc/nginx/apps/lidarr.conf <<LIDARR
 location /lidarr {
   proxy_pass        http://127.0.0.1:8686/lidarr;
   proxy_set_header Host \$proxy_host;
@@ -20,7 +19,7 @@ LIDARR
 
 fi
 if [[ ! -d /home/${MASTER}/.config/Lidarr/ ]]; then mkdir -p /home/${MASTER}/.config/Lidarr/; fi
-cat > /home/${MASTER}/.config/Lidarr/config.xml <<LIDARR
+cat >/home/${MASTER}/.config/Lidarr/config.xml <<LIDARR
 <Config>
   <Port>8686</Port>
   <UrlBase>lidarr</UrlBase>

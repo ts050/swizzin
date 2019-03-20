@@ -28,8 +28,8 @@ distribution=$(lsb_release -is)
 version=$(lsb_release -cs)
 username=$(cat /root/.master.info | cut -d: -f1)
 jackettver=$(wget -q https://github.com/Jackett/Jackett/releases/latest -O - | grep -E \/tag\/ | grep -v repository | awk -F "[><]" '{print $3}')
-echo >>"${OUTTO}" 2>&1;
-echo "Installing Jackett ... " >>"${OUTTO}" 2>&1;
+echo >>"${OUTTO}" 2>&1
+echo "Installing Jackett ... " >>"${OUTTO}" 2>&1
 
 if [[ ! -f /etc/apt/sources.list.d/mono-xamarin.list ]]; then
   if [[ $distribution == "Ubuntu" ]]; then
@@ -43,7 +43,7 @@ if [[ ! -f /etc/apt/sources.list.d/mono-xamarin.list ]]; then
       rm -rf libjpeg8.deb
     else
       gpg --keyserver http://keyserver.ubuntu.com --recv 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF >/dev/null 2>&1
-      gpg --export 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF > /etc/apt/trusted.gpg.d/mono-xamarin.gpg
+      gpg --export 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF >/etc/apt/trusted.gpg.d/mono-xamarin.gpg
     fi
   fi
   echo "deb http://download.mono-project.com/repo/debian wheezy/snapshots/5.8 main" | sudo tee /etc/apt/sources.list.d/mono-xamarin.list >/dev/null 2>&1
@@ -54,11 +54,11 @@ apt-get install -y mono-devel >/dev/null 2>&1
 
 cd /home/$username
 wget -q https://github.com/Jackett/Jackett/releases/download/$jackettver/Jackett.Binaries.Mono.tar.gz
-tar -xvzf Jackett.Binaries.Mono.tar.gz > /dev/null 2>&1
+tar -xvzf Jackett.Binaries.Mono.tar.gz >/dev/null 2>&1
 rm -f Jackett.Binaries.Mono.tar.gz
 chown ${username}.${username} -R Jackett
 
-cat > /etc/systemd/system/jackett@.service <<JAK
+cat >/etc/systemd/system/jackett@.service <<JAK
 [Unit]
 Description=jackett
 After=network.target
@@ -78,8 +78,7 @@ systemctl enable jackett@${username} >/dev/null 2>&1
 systemctl start jackett@${username}
 
 if [[ -f /install/.nginx.lock ]]; then
-  while [ ! -f /home/${username}/.config/Jackett/ServerConfig.json ]
-  do
+  while [ ! -f /home/${username}/.config/Jackett/ServerConfig.json ]; do
     sleep 2
   done
   bash /usr/local/bin/swizzin/nginx/jackett.sh
@@ -88,8 +87,8 @@ fi
 
 touch /install/.jackett.lock
 
-echo >>"${OUTTO}" 2>&1;
-echo >>"${OUTTO}" 2>&1;
-echo "Jackett Install Complete!" >>"${OUTTO}" 2>&1;
+echo >>"${OUTTO}" 2>&1
+echo >>"${OUTTO}" 2>&1
+echo "Jackett Install Complete!" >>"${OUTTO}" 2>&1
 
-echo "Close this dialog box to refresh your browser" >>"${OUTTO}" 2>&1;
+echo "Close this dialog box to refresh your browser" >>"${OUTTO}" 2>&1
