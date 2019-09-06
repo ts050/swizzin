@@ -84,7 +84,7 @@ function _cli() {
     if [[ -f /install/.${app}.lock ]]; then
       echo -e "Package $i already installed"
     else
-      if [[ "${repo[@]}" =~ $i ]]; then
+      if [[ "${repo[*]}" =~ $i ]]; then
         echo -e "Installing $i "
         bash /usr/local/bin/swizzin/install/$i.sh
       else
@@ -112,8 +112,9 @@ function _update() {
   echo -e "Updating swizzin local repository"
   cd /etc/swizzin
   git checkout master
+  git fetch origin master
   git reset --hard origin/master
-  git pull
+  #git pull
   chmod -R 700 /etc/swizzin/scripts
   for f in /etc/swizzin/scripts/update/*; do . $f; done
 }
@@ -124,7 +125,7 @@ function _upgrade() {
   repo=($(find /usr/local/bin/swizzin/upgrade -type f -printf "%f\n" | cut -d "." -f 1))
   for i in "${packages[@]}"; do
     app=${i}
-    if [[ "${repo[@]}" =~ $i ]]; then
+    if [[ "${repo[*]}" =~ $i ]]; then
       echo -e "Upgrading $i "
       bash /usr/local/bin/swizzin/upgrade/$i.sh
     else
@@ -172,7 +173,7 @@ function _help() {
 function _list() {
   repo=($(find /usr/local/bin/swizzin/install -type f -printf "%f\n" | cut -d. -f 1 | sort -d))
   if [[ -f /srv/panel/inc/localize.php ]]; then
-    lang=$(cat /srv/panel/inc/localize.php | grep language | cut -d "'" -f 2)
+    lang=$(grep language /srv/panel/inc/localize.php | cut -d "'" -f 2)
     locale=/srv/panel/lang/$lang
   else
     locale=/etc/swizzin/sources/lang_en
@@ -182,7 +183,7 @@ function _list() {
     if [[ $i == ombi ]]; then app=ombi; fi
     sgformat="${bold}%-15s${normal}"
     spacing=$(echo $'\t' | pr -Te15)
-    description=$(cat $locale | grep -i -m 1 \\\[\'$app | cut -d= -f2 | sed "s/ '//g" | sed "s/';//g" | sed "s/\\\'/'/g")
+    description=$(grep -i -m 1 \\\[\'$app $locale | cut -d= -f2 | sed "s/ '//g" | sed "s/';//g" | sed "s/\\\'/'/g")
     if [[ -z $description ]]; then description="Description missing";fi
     printf "${sgformat}" "$i"
     echo -e "${description}\n" | fmt --goal=50 | sed -e "2,\$s/^/$spacing/"
@@ -191,16 +192,29 @@ function _list() {
 }
 
 function _adduser {
-  if [[ -z $2 ]]; then
-    echo "Error: You must specify a user"
-    exit 1
-  fi
   user=$2
   if [[ $user =~ [A-Z] ]]; then
     echo "Usernames must not contain capital letters. Please try again."
     exit 1
   fi
+
+  if [[ -f /root/${user}.info ]]; then
+    echo "User already seems to exist"
+    exit 1
+  fi
+
+  id -u ${user} > /dev/null 2>&1
+  existing=$?
+
+  if [[ $existing == 0 ]]; then
+    echo "${user} already appears to be present on this machine; however, it does not appear to be configured as a swizzin user"
+    echo
+    read -rep 'Press enter to continue adding user.'
+    echo
+  fi
+
   echo -e "Enter password for ${user}. (leave empty to generate a password)"; read 'pass'
+
   if [[ -z "${pass}" ]]; then
     pass="$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c16)"
     echo "Password for ${user} has been set to ${pass}"
@@ -219,7 +233,9 @@ function _adduser {
     fi
   fi
   echo "$user:$pass" > /root/${user}.info
-  useradd "${user}" -m -G www-data -s /bin/bash
+  if [[ $existing == 1 ]]; then
+    useradd "${user}" -m -G www-data -s /bin/bash
+  fi
   chpasswd<<<"${user}:${pass}"
   htpasswd -b /etc/htpasswd $user $pass
   mkdir -p /etc/htpasswd.d/
@@ -272,7 +288,19 @@ fi
 
 function _deluser {
   user=$2
-  read -rep $'WARNING: This will delete the user '${user}' and all associated configs and subdirectories.\n\nPress enter to continue.'
+  if [[ ! -f /root/${user}.info ]]; then
+    master=$(cut -d: -f1 < /root/.master.info)
+    if [[ $user == $master ]]; then
+      echo "Master user deletion is not supported"
+      exit 1
+    fi
+    echo "Error: user ${user} not found. Exiting."
+    exit 1
+  fi
+
+  echo "WARNING: This will delete the user '${user}' and all associated configs and subdirectories. THIS ACTION CANNOT BE UNDONE."
+  echo
+  read -rep 'Removal will start as soon as you confirm this message. Press enter to continue.'
   
   for app in rtorrent rutorrent deluge autodl flood nzbget lounge; do
     if [[ $app = "rutorrent" ]]; then
@@ -338,7 +366,7 @@ function _chpasswd {
       echo "OK"
     fi
   fi
-  master=$(cat /root/.master.info | cut -d: -f1)
+  master=$(cut -d: -f1 < /root/.master.info)
   if [[ $user = $master ]]; then
     echo "$user:$pass" > /root/.master.info
   fi
@@ -350,7 +378,7 @@ function _chpasswd {
   if [[ -e /install/.deluge.lock ]]; then
     systemctl stop deluged@${user}
     systemctl stop deluge-web@${user}
-    DWSALT=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+    DWSALT=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 32 | head -n 1)
     DWP=$(python /usr/local/bin/swizzin/deluge.Userpass.py ${pass} ${DWSALT})
     sed -i "s/.*${user}.*/${user}:${pass}:10/" /home/$user/.config/deluge/auth
     sed -i "s/.*pwd_salt.*/  \"pwd_salt\": \"${DWSALT}\",/" /home/$user/.config/deluge/web.conf
@@ -434,6 +462,10 @@ case "$1" in
     exit 0
   ;;
   "adduser")
+    if [[ -z $2 ]]; then
+      echo "Error: You must specify a user"
+      exit 1
+    fi
     if [[ -n $3 ]]; then
       echo -e "Error: too many arguments\nCorrect usage: box adduser <username>"
       exit 1
@@ -442,6 +474,10 @@ case "$1" in
   exit 0
   ;;
   "deluser")
+    if [[ -z $2 ]]; then
+      echo -e "Error: you must specify a username.\nCorrect usage: box deluser <username>"
+      exit 1
+    fi
     if [[ -n $3 ]]; then
       echo -e "Error: too many arguments\nCorrect usage: box deluser <username>"
       exit 1

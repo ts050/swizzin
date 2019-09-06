@@ -3,7 +3,7 @@
 # Beware, this script *will* overwrite any personal modifications you have made.
 # Author: liara
 
-hostname=$(cat /etc/nginx/sites-enabled/default | grep -m1 -i server_name | sed 's/server_name//g' | sed 's/ //'g | sed 's/;//g')
+hostname=$(grep -m1 "server_name" /etc/nginx/sites-enabled/default | awk '{print $2}' | sed 's/;//g')
 locks=($(find /usr/local/bin/swizzin/nginx -type f -printf "%f\n" | cut -d "." -f 1 | sort -d -r))
 
 if [[ ! -f /install/.nginx.lock ]]; then
@@ -26,7 +26,9 @@ rm -f /etc/nginx/sites-enabled/default
 rm -f /etc/nginx/conf.d/*
 rm -f /etc/nginx/snippets/{ssl-params,proxy,fancyindex}.conf
 
-if [[ -f /lib/systemd/system/php7.2-fpm.service ]]; then
+if [[ -f /lib/systemd/system/php7.3-fpm.service ]]; then
+  sock=php7.3-fpm
+elif [[ -f /lib/systemd/system/php7.2-fpm.service ]]; then
   sock=php7.2-fpm
 elif [[ -f /lib/systemd/system/php7.1-fpm.service ]]; then
   sock=php7.1-fpm

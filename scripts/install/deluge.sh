@@ -13,103 +13,23 @@
 #
 #################################################################################
 
-function _deluge() {
-  if [[ $deluge == repo ]]; then
-    apt-get -q -y update >>"${OUTTO}" 2>&1
-    apt-get -q -y install deluged deluge-web deluge-console >>"${OUTTO}" 2>&1
-    
-    chmod 644 ${local_packages}/deluge.UpdateTracker.py
-    cp ${local_packages}/deluge.UpdateTracker.py /usr/lib/python2.7/dist-packages/deluge/ui/console/commands/update-tracker.py
-    
-    systemctl stop deluged
-    update-rc.d deluged remove
-    rm /etc/init.d/deluged
-  elif [[ $deluge == stable ]] || [[ $deluge == dev ]]; then
-    if [[ $deluge == stable ]]; then
-      LTRC=RC_1_0
-    elif [[ $deluge == dev ]]; then
-      LTRC=RC_1_1
-    fi
-  apt-get -qy update >/dev/null 2>&1
-  
-  LIST='build-essential checkinstall libtool libboost-system-dev libboost-python-dev libssl-dev libgeoip-dev libboost-chrono-dev libboost-random-dev
-  python python-twisted python-openssl python-setuptools intltool python-xdg python-chardet geoip-database python-notify python-pygame
-  python-glade2 librsvg2-common xdg-utils python-mako'
-  for depend in $LIST; do
-    apt-get -qq -y install $depend >>"${OUTTO}" 2>&1 || { echo "ERROR: APT-GET could not install a required package: ${depend}. That's probably not good..."; }
-  done
-  #OpenSSL 1.1.0 might fk a lot of things up -- Requires at least libboost-1.62 to build
-  #if [[ ! ${codename} =~ ("xenial")|("yakkety") ]]; then
-  #  LIST='libboost-system-dev libboost-python-dev libssl-dev libgeoip-dev libboost-chrono-dev libboost-random-dev'
-  #  for depend in $LIST; do
-  #    apt-get -qq -y install $depend >>"${OUTTO}" 2>&1
-  #  done
-  #else
-  #  cd /tmp
-  #  wget https://sourceforge.net/projects/boost/files/boost/1.62.0/boost_1_62_0.tar.gz
-  #  tar xf boost_1_62_0.tar.gz
-  #  cd boost_1_62_0
-  #  ./bootstrap.sh --prefix=/usr
-  #  ./b2 install
-  #fi
-
-  if [[ -n $noexec ]]; then
-    mount -o remount,exec /tmp
-    noexec=1
-  fi
-
-  cd /tmp
-  git clone -b ${LTRC} https://github.com/arvidn/libtorrent.git >>"${OUTTO}" 2>&1
-  git clone -b 1.3-stable git://deluge-torrent.org/deluge.git >>"${OUTTO}" 2>&1
-  cd libtorrent
-  ./autotool.sh >>"${OUTTO}" 2>&1
-  ./configure --enable-python-binding --with-lib-geoip --with-libiconv >>"${OUTTO}" 2>&1 >>"${OUTTO}" 2>&1
-  make -j$(nproc) >>"${OUTTO}" 2>&1
-  mkdir -p /usr/local/include
-  checkinstall -y --pkgversion=${LTRC} >>"${OUTTO}" 2>&1
-  ldconfig
-  cd ..
-  cd deluge
-  python setup.py build >>"${OUTTO}" 2>&1
-  python setup.py install --install-layout=deb >>"${OUTTO}" 2>&1
-  python setup.py install_data >>"${OUTTO}" 2>&1
-
-  chmod 644 ${local_packages}/deluge.UpdateTracker.py
-  cp ${local_packages}/deluge.UpdateTracker.py $(find /usr/lib/python2.7/dist-packages/ -name 'deluge*.egg')"/deluge/ui/console/commands/update-tracker.py"
-
-  cd ..
-  rm -r {deluge,libtorrent}
-
-  if [[ -n $noexec ]]; then
-	  mount -o remount,noexec /tmp
-  fi
-fi
-}
 function _dconf {
   for u in "${users[@]}"; do
     if [[ ${u} == ${master} ]]; then
-      pass=$(cat /root/.master.info | cut -d: -f2)
+      pass=$(cut -d: -f2 < /root/.master.info)
     else
-      pass=$(cat /root/${u}.info | cut -d: -f2)
+      pass=$(cut -d: -f2 < /root/${u}.info)
     fi
   n=$RANDOM
   DPORT=$((n%59000+10024))
-  DWSALT=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+  DWSALT=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 32 | head -n 1)
+  localpass=$(tr -dc 'a-f0-9' < /dev/urandom | fold -w 40 | head -n 1)
   DWP=$(python ${local_packages}/deluge.Userpass.py ${pass} ${DWSALT})
   DUDID=$(python ${local_packages}/deluge.addHost.py)
   # -- Secondary awk command -- #
   #DPORT=$(awk -v min=59000 -v max=69024 'BEGIN{srand(); print int(min+rand()*(max-min+1))}')
   DWPORT=$(shuf -i 10001-11000 -n 1)
-  mkdir -p /etc/skel/.config/deluge/plugins
-  if [[ ! -f /etc/skel/.config/deluge/plugins/ltConfig-0.3.1-py2.7.egg ]]; then
-    cd /etc/skel/.config/deluge/plugins/
-    wget -q https://github.com/ratanakvlun/deluge-ltconfig/releases/download/v0.3.1/ltConfig-0.3.1-py2.7.egg
-  fi
-  mkdir -p /home/${u}/.config/deluge/plugins
-  if [[ ! -f /home/${u}/.config/deluge/plugins/ltConfig-0.3.1-py2.7.egg ]]; then
-    cd /home/${u}/.config/deluge/plugins/
-    wget -q https://github.com/ratanakvlun/deluge-ltconfig/releases/download/v0.3.1/ltConfig-0.3.1-py2.7.egg
-  fi
+  ltconfig
   chmod 755 /home/${u}/.config
   chmod 755 /home/${u}/.config/deluge
   cat > /home/${u}/.config/deluge/core.conf <<DC
@@ -242,7 +162,14 @@ cat > /home/${u}/.config/deluge/web.conf <<DWC
   "sidebar_multiple_filters": true
 }
 DWC
-cat > /home/${u}/.config/deluge/hostlist.conf.1.2 <<DHL
+dvermajor=$(deluged -v | grep deluged | grep -oP '\d+\.\d+\.\d+' | cut -d. -f1)
+
+case $dvermajor in
+  1)
+  SUFFIX=.1.2
+  ;;
+esac
+cat > /home/${u}/.config/deluge/hostlist.conf${SUFFIX} <<DHL
 {
   "file": 1,
   "format": 1
@@ -252,14 +179,15 @@ cat > /home/${u}/.config/deluge/hostlist.conf.1.2 <<DHL
       "${DUDID}",
       "127.0.0.1",
       ${DPORT},
-      "${u}",
-      "${pass}"
+      "localclient",
+      "${localpass}"
     ]
   ]
 }
 DHL
 
   echo "${u}:${pass}:10" > /home/${u}/.config/deluge/auth
+  echo "localclient:${localpass}:10" >> /home/${u}/.config/deluge/auth
   chmod 600 /home/${u}/.config/deluge/auth
   chown -R ${u}.${u} /home/${u}/.config/
   mkdir /home/${u}/dwatch
@@ -270,6 +198,8 @@ done
 }
 function _dservice {
   if [[ ! -f /etc/systemd/system/deluged@.service ]]; then
+  dvermajor=$(deluged -v | grep deluged | grep -oP '\d+\.\d+\.\d+' | cut -d. -f1)
+  if [[ $dvermajor == 2 ]]; then args=" -d"; fi
     cat > /etc/systemd/system/deluged@.service <<DD
 [Unit]
 Description=Deluge Bittorrent Client Daemon
@@ -298,7 +228,7 @@ After=network.target
 Type=simple
 User=%I
 
-ExecStart=/usr/bin/deluge-web
+ExecStart=/usr/bin/deluge-web${args}
 ExecStop=/usr/bin/killall -w -s 9 /usr/bin/deluge-web
 TimeoutStopSec=300
 Restart=on-failure
@@ -308,8 +238,8 @@ WantedBy=multi-user.target
 DW
   fi
 for u in "${users[@]}"; do
-  systemctl enable deluged@${u} >>"${OUTTO}" 2>&1
-  systemctl enable deluge-web@${u} >>"${OUTTO}" 2>&1
+  systemctl enable deluged@${u} >>"${log}" 2>&1
+  systemctl enable deluge-web@${u} >>"${log}" 2>&1
   systemctl start deluged@${u}
   systemctl start deluge-web@${u}
 done
@@ -323,17 +253,18 @@ fi
 }
 
 if [[ -f /tmp/.install.lock ]]; then
-  OUTTO="/root/logs/install.log"
+  export log="/root/logs/install.log"
 else
-  OUTTO="/dev/null"
+  export log="/dev/null"
 fi
 local_packages=/usr/local/bin/swizzin
-users=($(cat /etc/htpasswd | cut -d ":" -f 1))
-master=$(cat /root/.master.info | cut -d: -f1)
-pass=$(cat /root/.master.info | cut -d: -f2)
+users=($(cut -d: -f1 < /etc/htpasswd))
+master=$(cut -d: -f1 < /root/.master.info)
+pass=$(cut -d: -f2 < /root/.master.info)
 codename=$(lsb_release -cs)
-ip=$(ip route get 8.8.8.8 | awk '{printf $7}')
-noexec=$(cat /etc/fstab | grep "/tmp" | grep noexec)
+ip=$(ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$/\1/p')
+noexec=$(grep "/tmp" /etc/fstab | grep noexec)
+. /etc/swizzin/sources/functions/deluge
 
 if [[ -n $1 ]]; then
   users=($1)
@@ -341,21 +272,26 @@ if [[ -n $1 ]]; then
   exit 0
 fi
 
-if [[ -z $deluge ]] && [[ -z $1 ]]; then
-  function=$(whiptail --title "Install Software" --menu "Choose a Deluge version:" --ok-button "Continue" --nocancel 12 50 3 \
-               Repo "" \
-               Stable "" \
-               Dev "" 3>&1 1>&2 2>&3)
-
-    if [[ $function == Repo ]]; then
-      export deluge=repo
-    elif [[ $function == Stable ]]; then
-      export deluge=stable
-    elif [[ $function == Dev ]]; then
-      export deluge=dev
-    fi
+whiptail_deluge
+if [[ ! -f /install/.libtorrent.lock ]]; then
+  whiptail_libtorrent_rasterbar
 fi
 
-_deluge
+if [[ -n $noexec ]]; then
+	mount -o remount,exec /tmp
+	noexec=1
+fi
+
+if [[ ! -f /install/libtorrent.lock ]]; then
+  echo "Building libtorrent-rasterbar"; build_libtorrent_rasterbar
+fi
+
+echo "Building Deluge"; build_deluge
+
+if [[ -n $noexec ]]; then
+	mount -o remount,noexec /tmp
+fi
+
+echo "Configuring Deluge"
 _dconf
 _dservice

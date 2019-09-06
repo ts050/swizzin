@@ -41,8 +41,7 @@ fi
 if [[ $codename == "jessie" ]]; then
   echo "deb http://packages.dotdeb.org $(lsb_release -sc) all" > /etc/apt/sources.list.d/dotdeb-php7-$(lsb_release -sc).list
   echo "deb-src http://packages.dotdeb.org $(lsb_release -sc) all" >> /etc/apt/sources.list.d/dotdeb-php7-$(lsb_release -sc).list
-  wget -q https://www.dotdeb.org/dotdeb.gpg
-  apt-key add dotdeb.gpg >> /dev/null 2>&1
+  wget -q -O- https://www.dotdeb.org/dotdeb.gpg | apt-key add - >> /dev/null 2>&1
 #  cat > /etc/apt/preferences.d/ssl <<EOP
 #Package: *libssl*
 #Pin: release o=debian
@@ -58,7 +57,7 @@ else
   geoip=php-geoip
 fi
 
-if [[ $codename == "bionic" ]]; then
+if [[ $codename =~ ("bionic"|"buster") ]]; then
   mcrypt=
 else
   mcrypt=php-mcrypt
@@ -85,7 +84,9 @@ for version in $phpv; do
   phpenmod -v $version opcache
 done
 
-if [[ -f /lib/systemd/system/php7.2-fpm.service ]]; then
+if [[ -f /lib/systemd/system/php7.3-fpm.service ]]; then
+  sock=php7.3-fpm
+elif [[ -f /lib/systemd/system/php7.2-fpm.service ]]; then
   sock=php7.2-fpm
 elif [[ -f /lib/systemd/system/php7.1-fpm.service ]]; then
   sock=php7.1-fpm
@@ -147,6 +148,8 @@ NGC
 mkdir -p /etc/nginx/ssl/
 mkdir -p /etc/nginx/snippets/
 mkdir -p /etc/nginx/apps/
+
+chmod 700 /etc/nginx/ssl
 
 cd /etc/nginx/ssl
 openssl dhparam -out dhparam.pem 2048 >>$log 2>&1
@@ -226,23 +229,8 @@ done
 
 systemctl restart nginx
 
-if [[ -f /lib/systemd/system/php7.2-fpm.service ]]; then
-  systemctl restart php7.2-fpm
-  if [[ $(systemctl is-active php7.1-fpm) == "active" ]]; then
-    systemctl stop php7.1-fpm
-    systemctl disable php7.1-fpm
-  fi
-  if [[ $(systemctl is-active php7.0-fpm) == "active" ]]; then
-    systemctl stop php7.0-fpm
-    systemctl disable php7.0-fpm
-  fi
-elif [[ -f /lib/systemd/system/php7.1-fpm.service ]]; then
-  systemctl restart php7.1-fpm
-  if [[ $(systemctl is-active php7.0-fpm) == "active" ]]; then
-    systemctl stop php7.0-fpm
-    systemctl disable php7.0-fpm
-  fi
-else
-  systemctl restart php7.0-fpm
-fi
+. /etc/swizzin/sources/functions/php
+restart_php_fpm
+
+
 touch /install/.nginx.lock

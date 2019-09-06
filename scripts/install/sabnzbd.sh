@@ -17,10 +17,10 @@
 #   including (via compiler) GPL-licensed code must also be made available
 #   under the GPL along with build & install instructions.
 
-username=$(cat /root/.master.info | cut -d: -f1)
+username=$(cut -d: -f1 < /root/.master.info)
 DISTRO=$(lsb_release -is)
 RELEASE=$(lsb_release -cs)
-PUBLICIP=$(ip route get 8.8.8.8 | awk '{printf $7}')
+PUBLICIP=$(ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$/\1/p')
 if [[ -f /tmp/.install.lock ]]; then
   OUTTO="/root/logs/install.log"
 elif [[ -f /install/.panel.lock ]]; then
@@ -67,7 +67,7 @@ cd /home/${username}/
 #wget -qO SABnzbd.tar.gz https://github.com/sabnzbd/sabnzbd/releases/download/1.1.1/SABnzbd-1.1.1-src.tar.gz
 #tar xf SABnzbd.tar.gz >/dev/null 2>&1
 #mv SABnzbd-* SABnzbd
-git clone -b 2.1.x https://github.com/sabnzbd/sabnzbd.git /home/${username}/SABnzbd >/dev/null 2>&1
+git clone -b 2.3.x https://github.com/sabnzbd/sabnzbd.git /home/${username}/SABnzbd >/dev/null 2>&1
 chown ${username}.${username} -R SABnzbd
 #rm SABnzbd.tar.gz
 pip install http://www.golug.it/pub/yenc/yenc-0.4.0.tar.gz >/dev/null 2>&1

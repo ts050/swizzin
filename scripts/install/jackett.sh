@@ -26,36 +26,18 @@ else
 fi
 distribution=$(lsb_release -is)
 version=$(lsb_release -cs)
-username=$(cat /root/.master.info | cut -d: -f1)
-jackettver=$(wget -q https://github.com/Jackett/Jackett/releases/latest -O - | grep -E \/tag\/ | grep -v repository | awk -F "[><]" '{print $3}')
+username=$(cut -d: -f1 < /root/.master.info)
+jackett=$(curl -s https://api.github.com/repos/Jackett/Jackett/releases/latest | grep AMDx64 | grep browser_download_url | cut -d \" -f4)
+#jackettver=$(wget -q https://github.com/Jackett/Jackett/releases/latest -O - | grep -E \/tag\/ | grep -v repository | awk -F "[><]" '{print $3}')
+password=$(cut -d: -f2 < /root/.master.info)
+
 echo >>"${OUTTO}" 2>&1;
 echo "Installing Jackett ... " >>"${OUTTO}" 2>&1;
 
-if [[ ! -f /etc/apt/sources.list.d/mono-xamarin.list ]]; then
-  if [[ $distribution == "Ubuntu" ]]; then
-    apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF >/dev/null 2>&1
-  elif [[ $distribution == "Debian" ]]; then
-    if [[ $version == "jessie" ]]; then
-      apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF >/dev/null 2>&1
-      cd /tmp
-      wget -q -O libjpeg8.deb http://ftp.fr.debian.org/debian/pool/main/libj/libjpeg8/libjpeg8_8d-1+deb7u1_amd64.deb
-      dpkg -i libjpeg8.deb >/dev/null 2>&1
-      rm -rf libjpeg8.deb
-    else
-      gpg --keyserver http://keyserver.ubuntu.com --recv 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF >/dev/null 2>&1
-      gpg --export 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF > /etc/apt/trusted.gpg.d/mono-xamarin.gpg
-    fi
-  fi
-  echo "deb http://download.mono-project.com/repo/debian wheezy/snapshots/5.8 main" | sudo tee /etc/apt/sources.list.d/mono-xamarin.list >/dev/null 2>&1
-fi
-
-apt-get update -y >/dev/null 2>&1
-apt-get install -y mono-devel >/dev/null 2>&1
-
 cd /home/$username
-wget -q https://github.com/Jackett/Jackett/releases/download/$jackettver/Jackett.Binaries.Mono.tar.gz
-tar -xvzf Jackett.Binaries.Mono.tar.gz > /dev/null 2>&1
-rm -f Jackett.Binaries.Mono.tar.gz
+wget -q $jackett
+tar -xvzf Jackett.Binaries.LinuxAMDx64.tar.gz > /dev/null 2>&1
+rm -f Jackett.Binaries.LinuxAMDx64.tar.gz
 chown ${username}.${username} -R Jackett
 
 cat > /etc/systemd/system/jackett@.service <<JAK
@@ -67,24 +49,51 @@ After=network.target
 Type=simple
 User=%I
 WorkingDirectory=/home/%I/Jackett
-ExecStart=/usr/bin/mono JackettConsole.exe --NoRestart
+ExecStart=/bin/sh -c "/home/%I/Jackett/jackett --NoRestart"
 Restart=always
 RestartSec=2
 [Install]
 WantedBy=multi-user.target
 JAK
 
-systemctl enable jackett@${username} >/dev/null 2>&1
-systemctl start jackett@${username}
+
+mkdir -p /home/${username}/.config/Jackett
+chown ${username}.${username} -R /home/${username}/.config
+cat > /home/${username}/.config/Jackett/ServerConfig.json <<JSC
+{
+  "Port": 9117,
+  "AllowExternal": true,
+  "APIKey": "",
+  "AdminPassword": "",
+  "InstanceId": "",
+  "BlackholeDir": "",
+  "UpdateDisabled": true,
+  "UpdatePrerelease": false,
+  "BasePathOverride": "",
+  "OmdbApiKey": "",
+  "OmdbApiUrl": "",
+  "ProxyUrl": "",
+  "ProxyType": 0,
+  "ProxyPort": null,
+  "ProxyUsername": "",
+  "ProxyPassword": "",
+  "ProxyIsAnonymous": true
+}
+JSC
 
 if [[ -f /install/.nginx.lock ]]; then
-  while [ ! -f /home/${username}/.config/Jackett/ServerConfig.json ]
-  do
-    sleep 2
-  done
   bash /usr/local/bin/swizzin/nginx/jackett.sh
   service nginx reload
 fi
+
+systemctl enable --now jackett@${username} >/dev/null 2>&1
+
+sleep 10
+
+cookie=$(curl -v 127.0.0.1:9117/jackett/UI/Dashboard -L 2>&1 | grep -m1 Set-Cookie | awk '{printf $3}' | sed 's/;//g')
+curl http://127.0.0.1:9117/jackett/api/v2.0/server/adminpassword -H 'Content-Type: application/json' -H 'Cookie: '${cookie}'' --data-binary '"'${password}'"'
+
+
 
 touch /install/.jackett.lock
 

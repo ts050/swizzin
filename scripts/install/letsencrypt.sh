@@ -15,7 +15,7 @@ if [[ ! -f /install/.nginx.lock ]]; then
     exit 1
 fi    
 
-ip=$(ip route get 8.8.8.8 | awk '{printf $7}')
+ip=$(ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$/\1/p')
 
 echo -e "Enter domain name to secure with LE"
 read -e hostname
@@ -101,6 +101,7 @@ if [[ ! -f /root/.acme.sh/acme.sh ]]; then
 fi
 
 mkdir -p /etc/nginx/ssl/${hostname}
+chmod 700 /etc/nginx/ssl
 
 if [[ ${cf} == yes ]]; then
   /root/.acme.sh/acme.sh --issue --dns dns_cf -d ${hostname} || { echo "ERROR: Certificate could not be issued. Please check your info and try again"; exit 1; }
@@ -126,7 +127,7 @@ if [[ -f /install/.znc.lock ]]; then
     # Check for LE cert, and copy it if available.
     chkhost="$(find /etc/nginx/ssl/* -maxdepth 1 -type d | cut -f 5 -d '/')"
     if [[ -n $chkhost ]]; then
-        defaulthost=$(cat /etc/nginx/sites-enabled/default | grep -m 1 server_name | awk '{print $2}' | sed 's/;//g')
+        defaulthost=$(grep -m1 "server_name" /etc/nginx/sites-enabled/default | awk '{print $2}' | sed 's/;//g')
         cat /etc/nginx/ssl/"$defaulthost"/{key,fullchain}.pem > /home/znc/.znc/znc.pem
         crontab -l > newcron.txt | sed -i  "s#cron#cron --post-hook \"cat /etc/nginx/ssl/"$defaulthost"/{key,fullchain}.pem > /home/znc/.znc/znc.pem\"#g" newcron.txt | crontab newcron.txt | rm newcron.txt
     fi
@@ -137,7 +138,7 @@ if [[ -f /install/.vsftpd.lock ]]; then
     # Check for LE cert, and copy it if available.
     chkhost="$(find /etc/nginx/ssl/* -maxdepth 1 -type d | cut -f 5 -d '/')"
     if [[ -n $chkhost ]]; then
-        defaulthost=$(cat /etc/nginx/sites-enabled/default | grep -m 1 server_name | awk '{print $2}' | sed 's/;//g')
+        defaulthost=$(grep -m1 "server_name" /etc/nginx/sites-enabled/default | awk '{print $2}' | sed 's/;//g')
         sed -i "s#rsa_cert_file=/etc/ssl/certs/ssl-cert-snakeoil.pem#rsa_cert_file=/etc/nginx/ssl/${defaulthost}/fullchain.pem#g" /etc/vsftpd.conf
         sed -i "s#rsa_private_key_file=/etc/ssl/private/ssl-cert-snakeoil.key#rsa_private_key_file=/etc/nginx/ssl/${defaulthost}/key.pem#g" /etc/vsftpd.conf
         systemctl restart vsftpd

@@ -35,23 +35,7 @@ function _installRadarrIntro() {
 function _installRadarrDependencies() {
   # output to box
   echo "Installing dependencies ... "
-  if [[ ! -f /etc/apt/sources.list.d/mono-xamarin.list ]]; then
-    if [[ $distribution == "Ubuntu" ]]; then
-      apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF >/dev/null 2>&1
-    elif [[ $distribution == "Debian" ]]; then
-      if [[ $version == "jessie" ]]; then
-        apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF >/dev/null 2>&1
-        cd /tmp
-        wget -q -O libjpeg8.deb http://ftp.fr.debian.org/debian/pool/main/libj/libjpeg8/libjpeg8_8d-1+deb7u1_amd64.deb
-        dpkg -i libjpeg8.deb >/dev/null 2>&1
-        rm -rf libjpeg8.deb
-      else
-        gpg --keyserver http://keyserver.ubuntu.com --recv 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF >/dev/null 2>&1
-        gpg --export 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF > /etc/apt/trusted.gpg.d/mono-xamarin.gpg
-      fi
-    fi
-    echo "deb http://download.mono-project.com/repo/debian wheezy/snapshots/5.8 main" | sudo tee /etc/apt/sources.list.d/mono-xamarin.list >/dev/null 2>&1
-  fi
+  mono_repo_setup
 }
 
 function _installRadarrCode() {
@@ -129,9 +113,10 @@ elif [[ -f /install/.panel.lock ]]; then
 else
   OUTTO="/dev/null"
 fi
-username=$(cat /root/.master.info | cut -d: -f1)
+username=$(cut -d: -f1 < /root/.master.info)
 distribution=$(lsb_release -is)
 version=$(lsb_release -cs)
+. /etc/swizzin/sources/functions/mono
 ip=$(curl -s http://whatismyip.akamai.com)
 
 _installRadarrIntro

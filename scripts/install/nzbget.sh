@@ -56,21 +56,10 @@ function _install {
     mkdir -p /home/$u/.ssl/
   fi
 
-  if [[ ! -f /home/$u/.ssl/$u-self-signed.key ]]; then
-    country=US
-    state=California
-    locality="San Fransisco"
-    organization=swizzin
-    organizationalunit=$u
-    commonname=$u
-    password=""
+  . /etc/swizzin/sources/functions/ssl
 
-    openssl genrsa -out "/home/$u/.ssl/$u-self-signed.key" 2048 >> $log 2>&1
-    openssl req -new -key /home/$u/.ssl/$u-self-signed.key -out /home/$u/.ssl/$u-self-signed.csr -passin pass:$password -subj "/C=$country/ST=$state/L=$locality/O=$organization/OU=$organizationalunit/CN=$commonname" >> $log 2>&1
-    openssl x509 -req -days 1095 -in "/home/$u/.ssl/$u-self-signed.csr" -signkey "/home/$u/.ssl/$u-self-signed.key" -out "/home/$u/.ssl/$u-self-signed.crt" >> $log 2>&1
-    chown -R $u: /home/$u/.ssl
-    chmod 750 /home/$u/.ssl
-  fi
+  create_self_ssl $u
+
   sed -i "s/SecureControl=no/SecureControl=yes/g" /home/$u/nzbget/nzbget.conf
   sed -i "s/SecureCert=/SecureCert=\/home\/$u\/.ssl\/$u-self-signed.crt/g" /home/$u/nzbget/nzbget.conf
   sed -i "s/SecureKey=/SecureKey=\/home\/$u\/.ssl\/$u-self-signed.key/g" /home/$u/nzbget/nzbget.conf
@@ -97,9 +86,9 @@ else
   log="/dev/null"
 fi
 
-users=($(cat /etc/htpasswd | cut -d ":" -f 1))
-master=$(cat /root/.master.info | cut -d: -f1)
-noexec=$(cat /etc/fstab | grep "/tmp" | grep noexec)
+users=($(cut -d: -f1 < /etc/htpasswd))
+master=$(cut -d: -f1 < /root/.master.info)
+noexec=$(grep "/tmp" /etc/fstab | grep noexec)
 
 if [[ -n $noexec ]]; then
 	mount -o remount,exec /tmp

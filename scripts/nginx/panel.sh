@@ -10,7 +10,7 @@
 #   under the GPL along with build & install instructions.
 #
 IFACE=$(ip link show|grep -i broadcast|grep -m1 UP|cut -d: -f 2|cut -d@ -f 1|sed -e 's/ //g');
-user=$(cat /root/.master.info | cut -d: -f1)
+user=$(cut -d: -f1 < /root/.master.info)
 if [[ -f /tmp/.install.lock ]]; then
   log="/root/logs/install.log"
 else
@@ -31,7 +31,9 @@ sed -i "s/LOCALE/${LOCALE}/g" /srv/panel/inc/localize.php
 sed -i "s/LANG/${LANG}/g" /srv/panel/inc/localize.php
 echo "*/1 * * * * root bash /usr/local/bin/swizzin/panel/set_interface" > /etc/cron.d/set_interface
 
-if [[ -f /lib/systemd/system/php7.2-fpm.service ]]; then
+if [[ -f /lib/systemd/system/php7.3-fpm.service ]]; then
+  sock=php7.3-fpm
+elif [[ -f /lib/systemd/system/php7.2-fpm.service ]]; then
   sock=php7.2-fpm
 elif [[ -f /lib/systemd/system/php7.1-fpm.service ]]; then
   sock=php7.1-fpm

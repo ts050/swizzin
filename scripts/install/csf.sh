@@ -2364,10 +2364,10 @@ LFDSERV
 
 OUTTO=/etc/QuickBox.csf-install.log
 HOSTNAME1=$(hostname -s)
-PUBLICIP=$(ip route get 8.8.8.8 | awk '{printf $7}')
+PUBLICIP=$(ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$/\1/p')
 #EMAIL=$(cat /srv/panel/db/masteremail.txt)
 local_setup=/etc/QuickBox/setup/
-username=$(cat /root/.master.info | cut -d: -f1)
-passwd=$(cat /root/.master.info | cut -d: -f2)
+username=$(cut -d: -f1 < /root/.master.info)
+passwd=$(cut -d: -f2 < /root/.master.info)
 
 _installCSF

@@ -2,11 +2,7 @@
 # Sick Gear Installer for swizzin
 # Author: liara
 
-#!/bin/bash
-# Sickrage installer for swizzin
-# Author: liara
-
-user=$(cat /root/.master.info | cut -d: -f1)
+user=$(cut -d: -f1 < /root/.master.info)
 if [[ -f /tmp/.install.lock ]]; then
   log="/root/logs/install.log"
 else
@@ -17,12 +13,12 @@ if [[ $(systemctl is-active medusa@${user}) == "active" ]]; then
   active=medusa
 fi
 
-if [[ $(systemctl is-active sickrage@${user}) == "active" ]]; then
-  active=sickrage
+if [[ $(systemctl is-active sickchill@${user}) == "active" ]]; then
+  active=sickchill
 fi
 
 if [[ -n $active ]]; then
-  echo "Sickrage and Medusa and Sickgear cannot be active at the same time."
+  echo "SickChill and Medusa and Sickgear cannot be active at the same time."
   echo "Do you want to disable $active and continue with the installation?"
   echo "Don't worry, your install will remain at /home/${user}/.$active"
   while true; do

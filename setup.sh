@@ -21,6 +21,14 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
+if [[ ! $(uname -m) == "x86_64" ]]; then
+  echo -e "\033[0;31mUnsupported architecture ($(uname -m)) detected! \033[0m"
+  echo
+  echo "Setup will not be blocked; however, none of the scripts have been written with alternative archtectures in mind, nor will they be. Things may work, things may not work. Do not open issues on github if they do not."
+  echo
+  read -rep 'By pressing enter to continue, you agree to the above statement. Press control-c to quit.'
+fi
+
 _os() {
   if [ ! -d /install ]; then mkdir /install ; fi
   if [ ! -d /root/logs ]; then mkdir /root/logs ; fi
@@ -34,7 +42,7 @@ _os() {
     if [[ ! $distribution =~ ("Debian"|"Ubuntu") ]]; then
       echo "Your distribution ($distribution) is not supported. Swizzin requires Ubuntu or Debian." && exit 1
     fi
-    if [[ ! $codename =~ ("xenial"|"yakkety"|"artful"|"bionic"|"jessie"|"stretch") ]]; then
+    if [[ ! $codename =~ ("xenial"|"bionic"|"jessie"|"stretch"|"buster") ]]; then
       echo "Your release ($codename) of $distribution is not supported." && exit 1
     fi
   echo "I have determined you are using $distribution $release."
@@ -196,56 +204,13 @@ function _choices() {
       sed -i "/rtorrent/a $g" /root/results
     done
     rm -f /root/guis
-
-    if [[ ${codename} =~ ("stretch"|"artful"|"bionic") ]]; then
-      function=feature-bind
-      #function=$(whiptail --title "Install Software" --menu "Choose an rTorrent version:" --ok-button "Continue" --nocancel 12 50 3 \
-              #  0.9.6 "" 3>&1 1>&2 2>&3)
-              #feature-bind "" \
-
-        if [[ $function == 0.9.6 ]]; then
-          export rtorrentver='0.9.6'
-          export libtorrentver='0.13.6'
-        elif [[ $function == feature-bind ]]; then
-        	export rtorrentver='feature-bind'
-        	export libtorrentver='feature-bind'
-        fi
-      else
-        function=$(whiptail --title "Install Software" --menu "Choose an rTorrent version:" --ok-button "Continue" --nocancel 12 50 3 \
-              feature-bind "" \
-              0.9.6 "" \
-              0.9.4 "" \
-              0.9.3 "" 3>&1 1>&2 2>&3)
-
-
-        if [[ $function == 0.9.6 ]]; then
-          export rtorrentver='0.9.6'
-          export libtorrentver='0.13.6'
-        elif [[ $function == 0.9.4 ]]; then
-          export rtorrentver='0.9.4'
-          export libtorrentver='0.13.4'
-        elif [[ $function == 0.9.3 ]]; then
-          export rtorrentver='0.9.3'
-          export libtorrentver='0.13.3'
-        elif [[ $function == feature-bind ]]; then
-        	export rtorrentver='feature-bind'
-        	export libtorrentver='feature-bind'
-        fi
-    fi
+    . /etc/swizzin/sources/functions/rtorrent
+    whiptail_rtorrent
   fi
   if grep -q deluge "$results"; then
-    function=$(whiptail --title "Install Software" --menu "Choose a Deluge version:" --ok-button "Continue" --nocancel 12 50 3 \
-                Repo "" \
-                Stable "" \
-                Dev "" 3>&1 1>&2 2>&3)
-
-      if [[ $function == Repo ]]; then
-        export deluge=repo
-      elif [[ $function == Stable ]]; then
-        export deluge=stable
-      elif [[ $function == Dev ]]; then
-        export deluge=dev
-      fi
+    . /etc/swizzin/sources/functions/deluge
+    whiptail_deluge
+    whiptail_libtorrent_rasterbar
   fi
   if [[ $(grep -s rutorrent "$gui") ]] && [[ ! $(grep -s nginx "$results") ]]; then
       if (whiptail --title "nginx conflict" --yesno --yes-button "Install nginx" --no-button "Remove ruTorrent" "WARNING: The installer has detected that ruTorrent is to be installed without nginx. To continue, the installer must either install nginx or remove ruTorrent from the packages to be installed." 8 78); then
@@ -297,7 +262,7 @@ function _install() {
 }
 
 function _post {
-  ip=$(ip route get 8.8.8.8 | awk '{printf $7}')
+  ip=$(ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$/\1/p')
   echo "export PATH=\$PATH:/usr/local/bin/swizzin" >> /root/.bashrc
   #echo "export PATH=\$PATH:/usr/local/bin/swizzin" >> /home/$user/.bashrc
   #chown ${user}: /home/$user/.profile
@@ -314,8 +279,8 @@ function _post {
     echo ""
   fi
   if [[ -f /install/.deluge.lock ]]; then
-    echo "Your deluge daemon port is$(cat /home/${user}/.config/deluge/core.conf | grep daemon_port | cut -d: -f2 | cut -d"," -f1)"
-    echo "Your deluge web port is$(cat /home/${user}/.config/deluge/web.conf | grep port | cut -d: -f2 | cut -d"," -f1)"
+    echo "Your deluge daemon port is$(grep daemon_port /home/${user}/.config/deluge/core.conf | cut -d: -f2 | cut -d"," -f1)"
+    echo "Your deluge web port is$(grep port /home/${user}/.config/deluge/web.conf | cut -d: -f2 | cut -d"," -f1)"
     echo ""
   fi
   echo -e "\e[1m\e[31mPlease note, certain functions may not be fully functional until your server is rebooted or you log out and back in. However you may issue the command 'source /root/.bashrc' to begin using box and related functions now\e[0m"

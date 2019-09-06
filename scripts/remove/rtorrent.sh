@@ -1,24 +1,23 @@
 #!/bin/bash
-users=($(cat /etc/htpasswd | cut -d ":" -f 1))
-
+users=($(cut -d: -f1 < /etc/htpasswd))
+export log=/dev/null
 read -n 1 -s -r -p "This will remove rTorrent and all associated interfaces (ruTorrent/Flood). Press any key to continue."
 printf "\n"
 
 for u in ${users}; do
   systemctl disable rtorrent@${u}
-  systemctl stop rtorrent@{u}
+  systemctl stop rtorrent@${u}
   rm -f /home/${u}/.rtorrent.rc
 done
 
-rm -rf /usr/bin/rtorrent
-cd /tmp
-git clone https://github.com/rakshasa/libtorrent.git libtorrent >>/dev/null 2>&1
-cd libtorrent
-./autogen.sh > /dev/null 2>&1
-./configure --prefix=/usr > /dev/null 2>&1
-make uninstall > /dev/null 2>&1
-cd -
-rm -rf /tmp/libtorrent
+. /etc/swizzin/sources/functions/rtorrent
+isdeb=$(dpkg -l | grep rtorrent)
+echo "Removing old rTorrent binaries and libraries ... ";
+if [[ -z $isdeb ]]; then
+	remove_rtorrent_legacy
+else
+  remove_rtorrent
+fi
 
 #apt-get -y remove mktorrent mediainfo
 for a in rutorrent flood; do

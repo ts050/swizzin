@@ -14,10 +14,12 @@ if [[ ! -f /install/.nginx.lock ]]; then
   exit 1
 fi
 
-users=($(cat /etc/htpasswd | cut -d ":" -f 1))
+users=($(cut -d: -f1 < /etc/htpasswd))
 
 apt-get update -y -q >>/dev/null 2>&1
-apt-get install -y -q sox geoip-database >>/dev/null 2>&1
+apt-get install -y -q sox geoip-database python python-setuptools python-pip >>/dev/null 2>&1
+
+pip install cloudscraper >> /dev/null 2>&1
 
 cd /srv
 if [[ ! -d /srv/rutorrent ]]; then
@@ -170,6 +172,8 @@ cat >/srv/rutorrent/conf/config.php<<RUC
 "id" => '/usr/bin/id', // Something like /usr/bin/id. If empty, will be found in PATH.
 "stat" => '/usr/bin/stat', // Something like /usr/bin/stat. If empty, will be found in PATH.
 "bzip2" => '/bin/bzip2',
+"pgrep" => '/usr/bin/pgrep',
+"python" => '/usr/bin/python',
 );
 
 \$localhosts = array( // list of local interfaces
@@ -185,7 +189,9 @@ cat >/srv/rutorrent/conf/config.php<<RUC
 ?>
 RUC
 
-if [[ -f /lib/systemd/system/php7.2-fpm.service ]]; then
+if [[ -f /lib/systemd/system/php7.3-fpm.service ]]; then
+  sock=php7.3-fpm
+elif [[ -f /lib/systemd/system/php7.2-fpm.service ]]; then
   sock=php7.2-fpm
 elif [[ -f /lib/systemd/system/php7.1-fpm.service ]]; then
   sock=php7.1-fpm
@@ -251,6 +257,9 @@ auth_basic_user_file /etc/htpasswd.d/htpasswd.${u};
 RUC
   fi
 done
+
+. /etc/swizzin/sources/functions/php
+restart_php_fpm
 
 chown -R www-data.www-data /srv/rutorrent
 systemctl reload nginx

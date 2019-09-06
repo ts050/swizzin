@@ -8,8 +8,8 @@ useradd lounge -m -s /bin/bash
 passwd lounge -l >> ${log} 2>&1
 
 if [[ ! $(which npm) ]] || [[ $(node --version) =~ "v6" ]]; then
-  bash <(curl -sL https://deb.nodesource.com/setup_8.x) >> $log 2>&1
-  apt-get -y -q install nodejs build-essential >> $log 2>&1
+  bash <(curl -sL https://deb.nodesource.com/setup_10.x) >> $log 2>&1
+  apt-get -y -q install nodejs build-essential npm >> $log 2>&1
 fi
 
 npm -g config set user root
@@ -465,12 +465,12 @@ sleep 3
 }
 
 function _adduser {
-master=$(cat /root/.master.info | cut -d: -f1)
+master=$(cut -d: -f1 < /root/.master.info)
 for u in "${users[@]}"; do
   if [[ $u = "$master" ]]; then
-    password=$(cat /root/.master.info | cut -d: -f2)
+    password=$(cut -d: -f2 < /root/.master.info)
   else
-    password=$(cat /root/$u.info | cut -d: -f2)
+    password=$(cut -d: -f2 < /root/$u.info)
   fi
   crypt=$(node /usr/lib/node_modules/thelounge/node_modules/bcryptjs/bin/bcrypt "${password}")
   cat > /home/lounge/.thelounge/users/$u.json <<EOU
@@ -494,7 +494,7 @@ else
   log="/dev/null"
 fi
 
-users=($(cat /etc/htpasswd | cut -d ":" -f 1))
+users=($(cut -d: -f1 < /etc/htpasswd))
 
 if [[ -n $1 ]]; then
 	users=$1
